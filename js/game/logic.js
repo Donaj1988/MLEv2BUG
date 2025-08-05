@@ -1,64 +1,47 @@
-import { START_RESOURCES, STORAGE_CAPACITY } from '../core/config.js';
-import { applyWorkerProduction, updatePopulationFromHouses, renderWorkersUI } from './workers.js';
-import { buildings } from './buildings.js';
-
-const state = { resources: { ...START_RESOURCES } };
-window.__state = state;
-
-function clampResource(key,val){
-  const cap = STORAGE_CAPACITY[key] ?? Infinity;
-  return Math.min(val, cap);
+export function getDefaultGameState() {
+  return {
+    resources: {
+      wood: 0,
+      stone: 0,
+      grain: 0,
+      population: 5,
+    },
+    storageLimits: {
+      wood: 100,
+      stone: 100,
+      grain: 100,
+      population: 10,
+    },
+    buildings: {
+      house: {
+        cost: { wood: 10, stone: 5 },
+        effect: { population: 2 },
+        count: 0,
+      },
+    },
+    workerSlots: {
+      wood: 5,
+      stone: 5,
+      grain: 5,
+      builder: 2,
+    },
+    assignedWorkers: {
+      wood: 0,
+      stone: 0,
+      grain: 0,
+      builder: 0,
+    },
+    population: 5,
+    buildingQueue: [],
+  };
 }
 
-function render(){
-  ['wood','stone','clay','grain'].forEach(r=>{
-    const amt=state.resources[r]||0;
-    const cap=STORAGE_CAPACITY[r]||0;
-    const percent = cap>0? Math.min(amt/cap*100,100):0;
-    const amtTop=document.getElementById(r+'-amount-top');
-    if(amtTop) amtTop.textContent=Math.floor(amt);
-    const capTop=document.getElementById(r+'-cap-top');
-    if(capTop) capTop.textContent=cap;
-    const barInner=document.getElementById(r+'-bar-top');
-    if(barInner) barInner.style.width=percent+'%';
-  });
-  // update population info
-  const popEl=document.getElementById('info-population');
-  const totalPop=buildings.smallHouse.count*2;
-  if(popEl) popEl.textContent=`${totalPop} / ${totalPop}`;
-}
+export const state = getDefaultGameState();
 
-export function startGameLoop(){
-  render();
-  setInterval(()=>{
-    // base income
-    if (state.assignedWorkers.wood > 0) {
-    state.resources.wood = clampResource('wood', state.resources.wood + state.assignedWorkers.wood);
+export function startGameLoop() {
+  setInterval(() => {
+    state.resources.wood += state.assignedWorkers.wood;
+    state.resources.stone += state.assignedWorkers.stone;
+    state.resources.grain += state.assignedWorkers.grain;
+  }, 1000);
 }
-    if (state.assignedWorkers.stone > 0) {
-    state.resources.stone = clampResource('stone', state.resources.stone + state.assignedWorkers.stone);
-}
-    if (state.assignedWorkers.clay > 0) {
-    state.resources.clay = clampResource('clay', state.resources.clay + state.assignedWorkers.clay);
-}
-    if (state.assignedWorkers.grain > 0) {
-    state.resources.grain = clampResource('grain', state.resources.grain + state.assignedWorkers.grain);
-}
-
-    // population from houses drives available workers
-    updatePopulationFromHouses(buildings.smallHouse.count);
-    renderWorkersUI();
-
-    // worker assigned production
-    applyWorkerProduction();
-
-    // enforce caps
-    ['wood','stone','clay','grain'].forEach(r=>{
-      state.resources[r]=clampResource(r, state.resources[r]);
-    });
-
-    render();
-  },1000);
-}
-
-export { state };
