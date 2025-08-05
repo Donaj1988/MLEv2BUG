@@ -8,7 +8,6 @@ let gameState = {};
 const SAVE_KEY = 'economicGameSave_v79_t2_t3_impl';
 
 function getDefaultGameState() {
-    // UPDATED: This function now uses the new tierConfig object.
     const tierKeys = Object.keys(tierConfig);
     const tierRequirements = tierKeys.reduce((acc, key) => {
         acc[key] = tierConfig[key].population;
@@ -43,8 +42,8 @@ function getDefaultGameState() {
         currentProductionBonus: 1.0, villageTier: C.TIERS.SETTLEMENT, nextSettlerEvent: 10, nextSettlerTime: 10,
         innSupplies: { bread: false, beer: false, meat: false, },
         buildings: JSON.parse(JSON.stringify(buildingDataConfig)),
-        totalBuildingLimits: totalBuildingLimits, // from new config
-        tierRequirements: tierRequirements, // from new config
+        totalBuildingLimits: totalBuildingLimits,
+        tierRequirements: tierRequirements,
         buildingQueue: [], 
         productionBonuses: {}, 
         lastSaveTimestamp: Date.now()
@@ -634,82 +633,71 @@ let lastTick = Date.now();
 let productionHalted = false;
 let hiddenTimestamp = null;
 
-function updateGameState(delta) {
-    const workingWorkers = Object.values(gameState.assignedWorkers).reduce((a, b) => a + b, 0);
 
+// --- Helper functions for updateGameState ---
+
+function processFoodConsumption(delta) {
+    const workingWorkers = Object.values(gameState.assignedWorkers).reduce((a, b) => a + b, 0);
     gameState.currentProductionBonus = 1.0;
     gameState.foodConsumptionPerSecond = { grain: 0, bread: 0, meat: 0, beer: 0, honey: 0, fish: 0 };
-    
     const wasHalted = productionHalted; 
     productionHalted = false;
 
-    if (workingWorkers > 0) {
-        const foodValueConfig = {
-            grain: { consumption: 0.3, bonus: 0.00 },
-            bread: { consumption: 0.2, bonus: 0.03 },
-            fish: { consumption: 0.25, bonus: 0.03 },
-            meat:  { consumption: 0.15, bonus: 0.05 },
-            beer:  { consumption: 0.18, bonus: 0.03 },
-            honey: { consumption: 0.17, bonus: 0.02 },
-        };
+    if (workingWorkers <= 0) return;
 
-        const availableFoodMix = {};
-        let totalAttractiveness = 0;
-        let totalBonus = 0;
-        
-        for (const food in foodValueConfig) {
-            if (gameState.suppliedFoods[food] && gameState.resources[food] > 0) {
-                const attractiveness = 1 / foodValueConfig[food].consumption;
-                availableFoodMix[food] = {
-                    attractiveness: attractiveness,
-                    config: foodValueConfig[food]
-                };
-                totalAttractiveness += attractiveness;
-                totalBonus += foodValueConfig[food].bonus;
-            }
+    const foodValueConfig = {
+        grain: { consumption: 0.3, bonus: 0.00 },
+        bread: { consumption: 0.2, bonus: 0.03 },
+        fish: { consumption: 0.25, bonus: 0.03 },
+        meat:  { consumption: 0.15, bonus: 0.05 },
+        beer:  { consumption: 0.18, bonus: 0.03 },
+        honey: { consumption: 0.17, bonus: 0.02 },
+    };
+
+    const availableFoodMix = {};
+    let totalAttractiveness = 0;
+    let totalBonus = 0;
+    
+    for (const food in foodValueConfig) {
+        if (gameState.suppliedFoods[food] && gameState.resources[food] > 0) {
+            const attractiveness = 1 / foodValueConfig[food].consumption;
+            availableFoodMix[food] = { attractiveness: attractiveness, config: foodValueConfig[food] };
+            totalAttractiveness += attractiveness;
+            totalBonus += foodValueConfig[food].bonus;
         }
+    }
 
-        if (totalAttractiveness > 0) {
-            let totalSatiationAvailable = 0;
+    if (totalAttractiveness > 0) {
+        let totalSatiationAvailable = 0;
+        for (const food in availableFoodMix) {
+             totalSatiationAvailable += gameState.resources[food] / availableFoodMix[food].config.consumption;
+        }
+        const satiationNeededThisTick = workingWorkers * delta;
+
+        if (totalSatiationAvailable >= satiationNeededThisTick) {
+            productionHalted = false;
+            gameState.currentProductionBonus = 1.0 + totalBonus;
             for (const food in availableFoodMix) {
-                 totalSatiationAvailable += gameState.resources[food] / availableFoodMix[food].config.consumption;
+                const proportion = availableFoodMix[food].attractiveness / totalAttractiveness;
+                const consumptionRate = availableFoodMix[food].config.consumption;
+                const consumptionPerSecondForFood = workingWorkers * proportion * consumptionRate;
+                const amountToConsumeThisTick = Math.min(consumptionPerSecondForFood * delta, gameState.resources[food]);
+                gameState.resources[food] -= amountToConsumeThisTick;
+                gameState.foodConsumptionPerSecond[food] = consumptionPerSecondForFood;
             }
-            const satiationNeededThisTick = workingWorkers * delta;
-
-            if (totalSatiationAvailable >= satiationNeededThisTick) {
-                productionHalted = false;
-                gameState.currentProductionBonus = 1.0 + totalBonus;
-
-                for (const food in availableFoodMix) {
-                    const proportion = availableFoodMix[food].attractiveness / totalAttractiveness;
-                    const consumptionRate = availableFoodMix[food].config.consumption;
-                    const consumptionPerSecondForFood = workingWorkers * proportion * consumptionRate;
-                    const amountToConsumeThisTick = consumptionPerSecondForFood * delta;
-                    
-                    const actualAmountToConsume = Math.min(amountToConsumeThisTick, gameState.resources[food]);
-
-                    gameState.resources[food] -= actualAmountToConsume;
-                    gameState.foodConsumptionPerSecond[food] = consumptionPerSecondForFood;
-                }
-            } else {
-                productionHalted = true;
-            }
-
         } else {
             productionHalted = true;
         }
-
-        if (productionHalted) {
-            if (!wasHalted) {
-                queueMessage(_t("ui.productionHaltedNoFood"), "error");
-            }
-            gameState.currentProductionBonus = 1.0;
-            gameState.foodConsumptionPerSecond = { grain: 0, bread: 0, meat: 0, beer: 0, honey: 0, fish: 0 };
-        }
     } else {
-        productionHalted = false;
+        productionHalted = true;
     }
 
+    if (productionHalted && !wasHalted) {
+        queueMessage(_t("ui.productionHaltedNoFood"), "error");
+    }
+}
+
+function processProduction(delta) {
     const foodTypes = ['grain', 'flour', 'bread', 'water', 'fish', 'cattle', 'meat', 'hops', 'beer', 'honey'];
     for (const workerType in gameState.assignedWorkers) {
         const workerCount = gameState.assignedWorkers[workerType];
@@ -717,14 +705,8 @@ function updateGameState(delta) {
 
         const data = workerData[workerType];
         
-        let isAnyFoodProducer = false;
-        if (data.produces) {
-            isAnyFoodProducer = Object.keys(data.produces).some(resource => foodTypes.includes(resource));
-        }
-        
-        if (productionHalted && !isAnyFoodProducer) {
-            continue;
-        }
+        let isAnyFoodProducer = data.produces ? Object.keys(data.produces).some(resource => foodTypes.includes(resource)) : false;
+        if (productionHalted && !isAnyFoodProducer) continue;
 
         let canProduce = true;
         if (data.consumes) {
@@ -746,7 +728,9 @@ function updateGameState(delta) {
             }
         }
     }
+}
 
+function processInnSupplies(delta) {
     const innConsumptionRate = 0.5; 
     const tierLevels = { settlement: 1, small_village: 2, village: 3, small_town: 4, town: 5 };
     const consumption = innConsumptionRate * tierLevels[gameState.villageTier] * delta;
@@ -763,11 +747,12 @@ function updateGameState(delta) {
          if (gameState.resources.meat >= consumption) gameState.resources.meat -= consumption;
         else gameState.innSupplies.meat = false;
     }
+}
 
+function processConstructionQueue(delta) {
     if (gameState.buildingQueue.length > 0) {
         const currentBuild = gameState.buildingQueue[0];
         const { currentTime } = calculateBuildTime(currentBuild.key);
-
         currentBuild.totalTime = currentTime;
 
         if (isFinite(currentBuild.totalTime)) {
@@ -778,7 +763,9 @@ function updateGameState(delta) {
             completeBuilding(currentBuild.key);
         }
     }
-    
+}
+
+function processSettlerArrival(delta) {
     if (gameState.populationLimit > gameState.totalWorkers) {
         gameState.nextSettlerEvent -= delta;
         if (gameState.nextSettlerEvent <= 0) {
@@ -789,7 +776,9 @@ function updateGameState(delta) {
             gameState.nextSettlerTime = newTime.totalTime;
         }
     }
+}
 
+function processTierUp() {
     const pop = gameState.totalWorkers;
     const tierKeys = Object.keys(gameState.tierRequirements);
     const currentTier = gameState.villageTier;
@@ -806,14 +795,12 @@ function updateGameState(delta) {
     const currentTierIndex = tierKeys.indexOf(currentTier);
     const newTierIndex = tierKeys.indexOf(newTier);
 
-    // REFACTORED: Tier-up logic now uses tierConfig
     if (newTierIndex > currentTierIndex) {
         const newTierData = tierConfig[newTier];
         
         let canAdvance = false;
         if (newTier === C.TIERS.SMALL_VILLAGE && isBuildingTierMet(C.BUILDINGS.REEVES_HOUSE)) canAdvance = true;
         else if (newTier === C.TIERS.VILLAGE && isBuildingTierMet(C.BUILDINGS.VILLAGE_HALL)) canAdvance = true;
-        // Add future tier-up building requirements here
         
         if (canAdvance) {
             gameState.villageTier = newTier;
@@ -828,6 +815,19 @@ function updateGameState(delta) {
             }
         }
     }
+}
+
+/**
+ * REFACTORED: The main game loop is now a clean dispatcher.
+ * It calls helper functions, making the logic flow clear and easy to manage.
+ */
+function updateGameState(delta) {
+    processFoodConsumption(delta);
+    processProduction(delta);
+    processInnSupplies(delta);
+    processConstructionQueue(delta);
+    processSettlerArrival(delta);
+    processTierUp();
 }
 
 function gameLoop() {
