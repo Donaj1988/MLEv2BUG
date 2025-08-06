@@ -2,7 +2,7 @@
 translations = {
     // UI Elements
     ui: {
-        eventLog: "Kronika Osady",
+       eventLog: "Kronika Osady",
         gathering: "Zbieractwo",
         workers: "Rzemieślnicy",
         buildings: "Budowle",
@@ -55,8 +55,9 @@ translations = {
         buildTimeInfo: "Czas bazowy: %baseTime%s, Czas budowy: %currentTime%s",
         upgrading: "Ulepszanie...",
         upgradeTo: "Ulepsz do",
+        upgrade: "Ulepsz",
         build: "Buduj",
-        populationReq: "Wymaga %count% dusz",
+        populationReq: "Wymaga %count% osadników",
         tierReq: "Wymaga Ery: %tier%",
         staffedBuildingReq: "Wymaga obsadzonej budowli: %building%",
         requires: "Wymaga",

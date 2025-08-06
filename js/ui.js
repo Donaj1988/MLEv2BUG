@@ -264,12 +264,6 @@ function createCheatPanelButtons() {
     dom.cheatPanelContent.appendChild(addSettlerBtn);
 }
 
-// ===================================================================================
-//
-//  SECTION 3: UI DISPLAY & UPDATES (REFACTORED)
-//
-// ===================================================================================
-
 function renderStorageItem(resKey) {
     const current = Math.floor(gameState.resources[resKey]);
     const limit = gameState.storageLimits[resKey];
@@ -306,6 +300,15 @@ function isBuildingTierMet(requiredKey) {
         currentKey = nextUpgrade;
     }
     return false;
+}
+
+function updateDisplay() {
+    updateResourceBar();
+    updateWorkerPanel();
+    updateBuildingCards();
+    updateInfoPanel();
+    updateFeatureVisibility();
+    updateCheatPanel();
 }
 
 function updateResourceBar() {
@@ -403,10 +406,6 @@ function updateWorkerPanel() {
     }
 }
 
-/**
- * REFACTORED: This function is now much simpler. It calls the central
- * checkBuildingRequirements function and uses its results to update the UI.
- */
 function updateBuildingCards() {
     for (const key in buildingUIs) {
         const ui = buildingUIs[key];
@@ -459,14 +458,11 @@ function updateBuildingCards() {
         ui.timeInfo.innerHTML = `<span class="font-semibold">${_t('ui.baseTime')}:</span> ${calculateBuildTime(targetKey).baseTime.toFixed(1)}s, <span class="font-semibold">${_t('ui.constructionTime')}:</span> ${isFinite(buildTime) ? buildTime.toFixed(1) + 's' : '∞'}`;
         ui.cost.innerHTML = Object.entries(targetBuilding.cost).map(([res, amount]) => `<span data-cost-res="${res}">${amount} ${_t('resources.'+res)}</span>`).join(', ');
         
-        // Centralized check call
         const check = checkBuildingRequirements(targetKey);
 
-        // Update requirements text
         ui.req.innerHTML = check.requirements.messages.join('<br>') || '';
         ui.req.classList.toggle('text-red-400', !check.requirements.passed);
 
-        // Update resource cost colors
         ui.cost.querySelectorAll('span[data-cost-res]').forEach(span => {
             const res = span.dataset.costRes;
             span.classList.toggle('text-red-400', !check.cost.details[res]?.met);
@@ -485,7 +481,6 @@ function updateBuildingCards() {
         ui.button.disabled = isButtonDisabled;
         ui.button.classList.toggle('build-btn-cant-afford', !check.cost.passed || !check.requirements.passed);
         
-        // Update status and progress bar
         if (isInQueue && !targetBuilding.repeatable) {
             const buildInstance = gameState.buildingQueue.find(b => b.key === targetKey);
             if (buildInstance) {
@@ -615,23 +610,6 @@ function updateCheatPanel() {
     if(addSettlerBtn) addSettlerBtn.textContent = _t('ui.add1Settler');
 }
 
-// This is the main dispatcher function
-function updateDisplay() {
-    updateResourceBar();
-    updateWorkerPanel();
-    updateBuildingCards();
-    updateInfoPanel();
-    updateFeatureVisibility();
-    updateCheatPanel();
-}
-
-
-// ===================================================================================
-//
-//  SECTION 4: UI INTERACTION & HELPERS
-//
-// ===================================================================================
-
 function showView(viewId) {
     document.querySelectorAll('.view-section').forEach(view => view.classList.remove('active'));
     document.getElementById(`${viewId}-view`).classList.add('active');
@@ -701,19 +679,28 @@ function hideTooltip() {
 function showResourceTooltip(resource, event) {
     const producers = [];
     const consumers = [];
-    const resourceName = _t('resources.' + resource);
 
+    // Gather producers
     for (const workerType in gameState.assignedWorkers) {
-        if (gameState.assignedWorkers[workerType] > 0 && workerData[workerType]) {
-            const data = workerData[workerType];
+        if (gameState.assignedWorkers[workerType] > 0 && workerData[workerType].produces && workerData[workerType].produces[resource]) {
             const workerCount = gameState.assignedWorkers[workerType];
-            const workerName = _t(data.nameKey);
-            if (data.produces && data.produces[resource]) {
-                 producers.push({ source: workerName, amount: (data.produces[resource] * gameState.currentProductionBonus) * workerCount });
-            }
-            if (data.consumes && data.consumes[resource]) {
-                consumers.push({ source: workerName, amount: data.consumes[resource] * workerCount });
-            }
+            const workerName = _t(workerData[workerType].nameKey);
+            producers.push({ 
+                source: `${workerName} (${workerCount})`, 
+                amount: (workerData[workerType].produces[resource] * gameState.currentProductionBonus) * workerCount 
+            });
+        }
+    }
+
+    // Gather consumers
+    for (const workerType in gameState.assignedWorkers) {
+        if (gameState.assignedWorkers[workerType] > 0 && workerData[workerType].consumes && workerData[workerType].consumes[resource]) {
+            const workerCount = gameState.assignedWorkers[workerType];
+            const workerName = _t(workerData[workerType].nameKey);
+            consumers.push({ 
+                source: `${workerName} (${workerCount})`, 
+                amount: workerData[workerType].consumes[resource] * workerCount 
+            });
         }
     }
 
@@ -728,17 +715,19 @@ function showResourceTooltip(resource, event) {
         consumers.push({ source: _t(buildingDataConfig.inn.nameKey), amount: consumption });
     }
 
-    let html = `<strong class="text-lg text-blue-300">${resourceName}</strong>`;
+    let html = `<strong class="text-lg text-blue-300">${_t('resources.'+resource)}</strong>`;
     if (producers.length > 0) {
         html += `<div class="mt-2"><strong class="text-green-400">${_t('ui.production')}:</strong><ul>`;
-        producers.forEach(p => { html += `<li>${p.source}: +${p.amount.toFixed(2)}/s</li>`; });
+        producers.forEach(p => { html += `<li>${_t('ui.productionDetail', {source: p.source, amount: p.amount.toFixed(2)})}</li>`; });
         html += `</ul></div>`;
     }
+    
     if (consumers.length > 0) {
         html += `<div class="mt-2"><strong class="text-red-400">${_t('ui.consumption')}:</strong><ul>`;
-        consumers.forEach(c => { html += `<li>${c.source}: -${c.amount.toFixed(2)}/s</li>`; });
+        consumers.forEach(c => { html += `<li>${_t('ui.consumptionDetail', {source: c.source, amount: c.amount.toFixed(2)})}</li>`; });
         html += `</ul></div>`;
     }
+
     if (producers.length === 0 && consumers.length === 0) {
         html += `<div class="mt-2">${_t('ui.noProductionOrConsumption')}</div>`;
     }
@@ -755,15 +744,15 @@ function showSettlerTooltip(event) {
     if (timeData.bonus > 0) {
         html += `<hr class="border-gray-600 my-1">`;
         let bonusHtml = '';
-        if (isBuildingTierMet(C.BUILDINGS.CHURCH) && gameState.assignedWorkers[C.WORKERS.PRIEST] > 0) bonusHtml += `<li>${_t('ui.bonusFrom')} ${_t(buildingDataConfig.church.nameKey)}: -${(gameState.buildings.church.effect.settlerTimeBonus * 100).toFixed(0)}%</li>`;
-        if (isBuildingTierMet(C.BUILDINGS.HEALERS_HUT) && gameState.assignedWorkers[C.WORKERS.HEALER] > 0) bonusHtml += `<li>${_t('ui.bonusFrom')} ${_t(buildingDataConfig.healersHut.nameKey)}: -${(gameState.buildings.healersHut.effect.settlerTimeBonus * 100).toFixed(0)}%</li>`;
+        if (isBuildingTierMet(C.BUILDINGS.CHURCH) && gameState.assignedWorkers[C.WORKERS.PRIEST] > 0) bonusHtml += `<li>${_t('ui.bonusFrom')} ${_t(buildingDataConfig.church.nameKey)}: -${(BALANCE.buildingEffects.church.settlerTimeBonus * 100).toFixed(0)}%</li>`;
+        if (isBuildingTierMet(C.BUILDINGS.HEALERS_HUT) && gameState.assignedWorkers[C.WORKERS.HEALER] > 0) bonusHtml += `<li>${_t('ui.bonusFrom')} ${_t(buildingDataConfig.healersHut.nameKey)}: -${(BALANCE.buildingEffects.healersHut.settlerTimeBonus * 100).toFixed(0)}%</li>`;
         if (isBuildingTierMet(C.BUILDINGS.TAVERN)) {
              if (gameState.assignedWorkers[C.WORKERS.INNKEEPER] > 0) {
-                bonusHtml += `<li>${_t('ui.bonusFrom')} ${_t(buildingDataConfig.inn.nameKey)}: -${(gameState.buildings.inn.effect.settlerTimeBonus * 100).toFixed(0)}%</li>`;
-                if (gameState.assignedWorkers[C.WORKERS.TAVERN_MAID] > 0) bonusHtml += `<li>${_t('ui.bonusFrom')} ${_t(buildingDataConfig.tavern.nameKey)}: -${(gameState.buildings.tavern.effect.settlerTimeBonus * 100).toFixed(0)}%</li>`;
+                bonusHtml += `<li>${_t('ui.bonusFrom')} ${_t(buildingDataConfig.inn.nameKey)}: -${(BALANCE.buildingEffects.inn.settlerTimeBonus * 100).toFixed(0)}%</li>`;
+                if (gameState.assignedWorkers[C.WORKERS.TAVERN_MAID] > 0) bonusHtml += `<li>${_t('ui.bonusFrom')} ${_t(buildingDataConfig.tavern.nameKey)}: -${(BALANCE.buildingEffects.tavern.settlerTimeBonus * 100).toFixed(0)}%</li>`;
              }
         } else if (isBuildingTierMet(C.BUILDINGS.INN) && gameState.assignedWorkers[C.WORKERS.INNKEEPER] > 0) {
-            bonusHtml += `<li>${_t('ui.bonusFrom')} ${_t(buildingDataConfig.inn.nameKey)}: -${(gameState.buildings.inn.effect.settlerTimeBonus * 100).toFixed(0)}%</li>`;
+            bonusHtml += `<li>${_t('ui.bonusFrom')} ${_t(buildingDataConfig.inn.nameKey)}: -${(BALANCE.buildingEffects.inn.settlerTimeBonus * 100).toFixed(0)}%</li>`;
         }
         if (gameState.innSupplies.bread) bonusHtml += `<li>${_t('ui.bonusFrom')} ${_t('resources.bread')}: -5%</li>`;
         if (gameState.innSupplies.beer) bonusHtml += `<li>${_t('ui.bonusFrom')} ${_t('resources.beer')}: -5%</li>`;

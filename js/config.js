@@ -88,22 +88,25 @@ const BALANCE = {
         lumberjacksHut: { workerSlots: { wood: 5 } },
         quarry: { workerSlots: { stone: 5 } },
         clayPit: { workerSlots: { clayMiner: 5 } },
-        reevesHouse: { unlocks: ['houseBuilding', 'innBuilding', 'churchBuilding', 'apiaryBuilding', 'charcoalKilnBuilding'] },
+        
+        reevesHouse: { unlocks: ['houseBuilding', 'wellBuilding', 'millBuilding', 'innBuilding'] },
+        mill: { unlocks: ['flour', 'bakeryBuilding'], workerSlots: { miller: 3 } },
+        bakery: { unlocks: ['bread', 'fishermansHutBuilding', 'brickyardBuilding', 'pottersWorkshopBuilding'], workerSlots: { baker: 5 } },
+        brickyard: { unlocks: ['bricks', 'apiaryBuilding', 'candlemakersWorkshopBuilding'], workerSlots: { brickmaker: 3 } },
+
         workersLodge: { workerLimit: 10, workerSlots: { foreman: 1 } },
         buildersWorkshop: { workerSlots: { builder: 4, masterBuilder: 1 } },
         house: { population: 5 },
-        mill: { unlocks: ['flour'], workerSlots: { miller: 3 } },
-        bakery: { unlocks: ['bread'], workerSlots: { baker: 5 } },
         well: { unlocks: ['water'], workerSlots: { water: 5 } },
         apiary: { unlocks: ['honey', 'wax'], workerSlots: { beekeeper: 3 } },
         candlemakersWorkshop: { unlocks: ['candles'], workerSlots: { candlemaker: 2 } },
         fishermansHut: { unlocks: ['fish'], workerSlots: { fisherman: 4 } },
-        brickyard: { unlocks: ['bricks'], workerSlots: { brickmaker: 3 } },
         pottersWorkshop: { unlocks: ['pottery'], workerSlots: { potter: 3 } },
         herbalistsGarden: { unlocks: ['herbs'], workerSlots: { herbalist: 2 } },
         charcoalKiln: { unlocks: ['charcoal'], workerSlots: { charcoalBurner: 2 } },
-        inn: { settlerTimeBonus: 0.15, workerSlots: { innkeeper: 1 } },
+        inn: { settlerTimeBonus: 0.15, workerSlots: { innkeeper: 1 }, unlocks: ['churchBuilding'] },
         church: { settlerTimeBonus: 0.03, workerSlots: { priest: 1 } },
+        
         villageHall: { unlocks: ['ironMineBuilding', 'smelteryBuilding', 'blacksmithBuilding'], workerSlots: { clerk: 1 } },
         workersQuarters: { workerLimit: 10, workerSlots: { foreman: 1, foremanAssistant: 5 } },
         masterBuildersHouse: { workerSlots: { builder: 6, masterBuilder: 1 } },
@@ -128,7 +131,7 @@ const BALANCE = {
     },
     bonuses: {
         foremanWorkerLimit: 30,
-        assistantMultiplier: { // Placeholder for potential future use
+        assistantMultiplier: { 
             workersQuarters: 22,
             workersBarracks: 20,
             workersGuildhall: 65,
@@ -145,11 +148,7 @@ const tierConfig = {
     [C.TIERS.SMALL_VILLAGE]: {
         population: 10,
         buildingLimit: 45,
-        unlocks: [
-            'wellBuilding', 'fishermansHutBuilding', 'pottersWorkshopBuilding', 
-            'herbalistsGardenBuilding', 'millBuilding', 'bakeryBuilding', 
-            'brickyardBuilding', 'candlemakersWorkshopBuilding'
-        ],
+        unlocks: [], // Unlocks are now handled by buildings, not by tier-up
         showModal: true 
     },
     [C.TIERS.VILLAGE]: {
