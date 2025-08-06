@@ -72,6 +72,8 @@ function initializeDOM() {
         infoSettlerBonus: document.getElementById('info-settler-bonus'),
         infoSettlerProgressBar: document.getElementById('info-settler-progress-bar'),
         infoSettlerProgressContainer: document.getElementById('info-settler-progress-container'),
+        objectivesContainer: document.getElementById('objectives-container'),
+        objectivesList: document.getElementById('objectives-list'),
         storageLimitsList: document.getElementById('storage-limits-list'),
         infoConstructionContainer: document.getElementById('info-construction-container'),
         infoConstructionQueue: document.getElementById('info-construction-queue'),
@@ -226,14 +228,9 @@ function createBuildingCards() {
                 card.innerHTML = `
                     <div class="building-card-content">
                         <h3 id="${key}-name" class="text-xl font-bold"></h3>
-                        <p id="${key}-desc" class="text-sm text-gray-300 mt-2 mb-3"></p>
+                        <div id="${key}-upgrade-from-info" class="hidden text-xs text-gray-400 mb-2"></div>
+                        <p id="${key}-desc" class="text-sm text-gray-300 mt-1 mb-3"></p>
                         
-                        <div id="${key}-upgrade-section" class="hidden bg-gray-800 p-3 rounded-lg mb-3">
-                            <p class="text-xs text-blue-300 uppercase font-semibold mb-1">${_t('ui.upgradeTo')}:</p>
-                            <h4 id="${key}-upgrade-name" class="text-lg font-bold"></h4>
-                            <p id="${key}-upgrade-desc" class="text-xs text-gray-400 mt-1"></p>
-                        </div>
-
                         <div class="my-2 text-sm">
                             <p><strong>${_t('ui.cost')}</strong> <span id="${key}-cost" class="font-semibold"></span></p>
                         </div>
@@ -269,9 +266,7 @@ function createBuildingCards() {
                 timeInfoEl.addEventListener('mousemove', (e) => { dom.tooltip.style.left = `${e.pageX + 15}px`; dom.tooltip.style.top = `${e.pageY + 15}px`; });
                 buildingUIs[key] = { 
                     card: card, name: card.querySelector(`#${key}-name`), desc: card.querySelector(`#${key}-desc`), 
-                    upgradeSection: card.querySelector(`#${key}-upgrade-section`), 
-                    upgradeName: card.querySelector(`#${key}-upgrade-name`), 
-                    upgradeDesc: card.querySelector(`#${key}-upgrade-desc`), 
+                    upgradeFromInfo: card.querySelector(`#${key}-upgrade-from-info`),
                     req: card.querySelector(`#${key}-req`), status: card.querySelector(`#${key}-status`), 
                     progressBar: card.querySelector(`#${key}-progress-bar`), button: card.querySelector(`#build-${key}-button`), 
                     demolishButton: card.querySelector(`#demolish-${key}-button`), cost: card.querySelector(`#${key}-cost`), 
@@ -345,6 +340,7 @@ function updateDisplay() {
     updateWorkerPanel();
     updateBuildingCards();
     updateInfoPanel();
+    updateObjectives();
     updateFeatureVisibility();
     updateCheatPanel();
 }
@@ -477,7 +473,7 @@ function updateBuildingCards() {
         const upgradeTargetKey = findUpgradeTarget(currentStageKey);
         const stageBuilding = gameState.buildings[currentStageKey];
 
-        ui.upgradeSection.classList.add('hidden');
+        ui.upgradeFromInfo.classList.add('hidden');
 
         if (stageBuilding.betaStop && isBuilt) {
             ui.name.innerHTML = _t(stageBuilding.nameKey);
@@ -496,20 +492,21 @@ function updateBuildingCards() {
         const currentStageBuilding = gameState.buildings[currentStageKey];
         const queueCount = gameState.buildingQueue.filter(b => b.key === key).length;
         
-        ui.name.innerHTML = `${_t(currentStageBuilding.nameKey)} <span class="text-base text-gray-400">${currentStageBuilding.repeatable ? `(${currentStageBuilding.count}${queueCount > 0 ? ` +${queueCount}` : ''})` : ''}</span>`;
-        ui.desc.textContent = _t(currentStageBuilding.descriptionKey);
-
         const isUpgrade = !!upgradeTargetKey && isBuilt;
         const targetKey = isUpgrade ? upgradeTargetKey : currentStageKey;
         const targetBuilding = gameState.buildings[targetKey];
+
+        if (isUpgrade) {
+            ui.name.innerHTML = _t(targetBuilding.nameKey);
+            ui.desc.textContent = _t(targetBuilding.descriptionKey);
+            ui.upgradeFromInfo.classList.remove('hidden');
+            ui.upgradeFromInfo.textContent = `(Ulepszenie z: ${_t(currentStageBuilding.nameKey)})`;
+        } else {
+            ui.name.innerHTML = `${_t(currentStageBuilding.nameKey)} <span class="text-base text-gray-400">${currentStageBuilding.repeatable ? `(${currentStageBuilding.count}${queueCount > 0 ? ` +${queueCount}` : ''})` : ''}</span>`;
+            ui.desc.textContent = _t(currentStageBuilding.descriptionKey);
+        }
         
         ui.timeInfo.dataset.buildKey = targetKey;
-        
-        if (isUpgrade) {
-            ui.upgradeSection.classList.remove('hidden');
-            ui.upgradeName.textContent = _t(targetBuilding.nameKey);
-            ui.upgradeDesc.textContent = _t(targetBuilding.descriptionKey);
-        }
 
         const { currentTime: buildTime } = calculateBuildTime(targetKey);
         ui.timeInfo.innerHTML = `<span class="font-semibold">${_t('ui.baseTime')}:</span> ${calculateBuildTime(targetKey).baseTime.toFixed(1)}s, <span class="font-semibold">${_t('ui.constructionTime')}:</span> ${isFinite(buildTime) ? buildTime.toFixed(1) + 's' : '∞'}`;
@@ -634,6 +631,49 @@ function updateInfoPanel() {
         });
     }
 }
+
+function updateObjectives() {
+    if (!gameState.activeObjectiveId) {
+        dom.objectivesContainer.classList.add('hidden');
+        return;
+    }
+    
+    dom.objectivesContainer.classList.remove('hidden');
+    const objective = objectivesConfig.find(o => o.id === gameState.activeObjectiveId);
+    if (!objective) return;
+
+    let current = 0;
+    let required = 0;
+    
+    switch (objective.type) {
+        case 'build':
+            const building = gameState.buildings[objective.params.buildingKey];
+            current = building.repeatable ? building.count : (building.isBuilt ? 1 : 0);
+            required = objective.params.count;
+            break;
+        case 'population':
+            current = gameState.totalWorkers;
+            required = objective.params.count;
+            break;
+    }
+
+    const rewardString = Object.entries(objective.reward.resources).map(([res, amount]) => `${amount} ${_t('resources.'+res)}`).join(', ');
+
+    dom.objectivesList.innerHTML = `
+        <div class="bg-gray-900 p-3 rounded-lg">
+            <p class="font-semibold text-gray-300">${_t(`objectives.${objective.id}.title`)}</p>
+            <p class="text-xs text-gray-400 mt-1">${_t(`objectives.${objective.id}.desc`)}</p>
+            <div class="flex justify-between items-center mt-2 text-xs">
+                <span>${_t('ui.progress')}: ${current} / ${required}</span>
+                <span class="font-semibold">${_t('ui.reward')}: ${rewardString}</span>
+            </div>
+            <div class="w-full bg-gray-700 rounded-full h-2 mt-1">
+                <div class="bg-green-500 h-2 rounded-full" style="width: ${Math.min(100, (current / required) * 100)}%"></div>
+            </div>
+        </div>
+    `;
+}
+
 
 function updateFeatureVisibility() {
     dom.canteenSection.classList.toggle('hidden', !gameState.unlockedFeatures.includes('workers'));
@@ -837,7 +877,7 @@ function showBuildTimeTooltip(key, event) {
     if (!building) return;
 
     const { baseTime, currentTime, details } = calculateBuildTime(key, true);
-    const playerBaseSpeed = 2;
+    const playerBaseSpeed = 5;
 
     let html = `<strong class="text-lg text-blue-300">${_t('ui.constructionTime')}</strong>`;
     html += `<div class="mt-2"><span>${_t('ui.baseTime')}:</span> <span class="font-semibold">${baseTime.toFixed(1)}s</span></div>`;
