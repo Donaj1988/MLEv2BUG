@@ -1,4 +1,4 @@
-const SAVE_KEY = 'economicGameSave_v79_t2_t3_impl';
+const SAVE_KEY = 'economicGameSave_v80_objectives';
 
 const C = {
     TIERS: {
@@ -291,3 +291,26 @@ const buildingDataConfig = {
     //Tier 4 - Miasteczko
     tenement: { nameKey: "buildingNames.tenement", descriptionKey: "buildingDescriptions.tenement", category: "population", cost: { wood: 200, stone: 150, bricks: 450 }, count: 0, repeatable: true, effect: BALANCE.buildingEffects.tenement, requires: { building: { key: C.BUILDINGS.MASTER_BUILDERS_HOUSE, staffed: true } } },
 };
+
+const objectivesConfig = [
+    { id: 'buildLumberjacksHut',
+      type: 'build',
+      params: { buildingKey: 'lumberjacksHut', count: 1 },
+      reward: { resources: { wood: 50, stone: 20 } } },
+    { id: 'buildQuarry',
+      type: 'build',
+      params: { buildingKey: 'quarry', count: 1 },
+      reward: { resources: { wood: 50, stone: 50 } } },
+    { id: 'reach15Settlers',
+      type: 'population',
+      params: { count: 15 },
+      reward: { resources: { grain: 100 } } },
+    { id: 'buildFarm',
+      type: 'build',
+      params: { buildingKey: 'farm', count: 1 },
+      reward: { resources: { wood: 100 } } },
+    { id: 'upgradeToReevesHouse',
+      type: 'build',
+      params: { buildingKey: 'reevesHouse', count: 1 },
+      reward: { resources: { wood: 100, stone: 100, clay: 100 } } }
+];

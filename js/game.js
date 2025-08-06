@@ -46,7 +46,9 @@ function getDefaultGameState() {
         tierRequirements: tierRequirements,
         buildingQueue: [], 
         productionBonuses: {}, 
-        lastSaveTimestamp: Date.now()
+        lastSaveTimestamp: Date.now(),
+        completedObjectives: [],
+        activeObjectiveId: objectivesConfig[0].id,
     };
 }
 
@@ -199,7 +201,7 @@ function calculateBuildTime(key, getDetails = false) {
 
     const baseTime = Object.values(building.cost).reduce((a, b) => a + b, 0) / 5;
     const builderCount = gameState.assignedWorkers[C.WORKERS.BUILDER];
-    const playerBaseSpeed = 2; // Zwiększona bazowa prędkość budowy
+    const playerBaseSpeed = 5; // Zwiększona bazowa prędkość budowy
     const speedPerBuilder = 0.1;
     const builderPower = builderCount * speedPerBuilder;
     let totalSpeed = playerBaseSpeed + builderPower;
@@ -414,6 +416,7 @@ function completeBuilding(key) {
     if (building.effect.buildingUnlocks) unlockGameFeatures(building.effect.buildingUnlocks);
     
     gameState.buildingQueue.shift(); 
+    checkObjectives();
 
     if (gameState.buildingQueue.length > 0) {
         const nextBuildingKey = gameState.buildingQueue[0].key;
@@ -815,6 +818,50 @@ function processTierUp() {
     }
 }
 
+function checkObjectives() {
+    if (!gameState.activeObjectiveId) return;
+
+    const objective = objectivesConfig.find(o => o.id === gameState.activeObjectiveId);
+    if (!objective) return;
+
+    let isCompleted = false;
+    switch (objective.type) {
+        case 'build':
+            const building = gameState.buildings[objective.params.buildingKey];
+            if (building.repeatable) {
+                if (building.count >= objective.params.count) isCompleted = true;
+            } else {
+                if (building.isBuilt) isCompleted = true;
+            }
+            break;
+        case 'population':
+            if (gameState.totalWorkers >= objective.params.count) isCompleted = true;
+            break;
+    }
+
+    if (isCompleted) {
+        gameState.completedObjectives.push(objective.id);
+        queueMessage(_t('messages.objectiveComplete', { name: _t(`objectives.${objective.id}.title`) }), 'success');
+        
+        if (objective.reward.resources) {
+            let rewardStrings = [];
+            for (const res in objective.reward.resources) {
+                addResource(res, objective.reward.resources[res]);
+                rewardStrings.push(`${objective.reward.resources[res]} ${_t('resources.' + res)}`);
+            }
+             queueMessage(_t('messages.reward', { reward: rewardStrings.join(', ') }), 'success', 500);
+        }
+
+        const nextObjectiveIndex = objectivesConfig.findIndex(o => o.id === objective.id) + 1;
+        if (nextObjectiveIndex < objectivesConfig.length) {
+            gameState.activeObjectiveId = objectivesConfig[nextObjectiveIndex].id;
+        } else {
+            gameState.activeObjectiveId = null; // No more objectives
+        }
+    }
+}
+
+
 function updateGameState(delta) {
     processFoodConsumption(delta);
     processProduction(delta);
@@ -822,6 +869,7 @@ function updateGameState(delta) {
     processConstructionQueue(delta);
     processSettlerArrival(delta);
     processTierUp();
+    checkObjectives();
 }
 
 function gameLoop() {
