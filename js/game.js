@@ -23,7 +23,7 @@ function getDefaultGameState() {
             charcoal: 0, ironOre: 0, ironIngots: 0, tools: 0
         },
         storageLimits: { 
-            wood: 100, stone: 100, grain: 100, flour: 0, bread: 0, cattle: 0, meat: 0, hops: 0, water: 0, beer: 0, rawhide: 0, leather: 0, honey: 0, wax: 0, fish: 0, clay: 100, pottery: 0, bricks: 0, wool: 0, fabric: 0, clothes: 0, herbs: 0, candles: 0,
+            wood: 1000, stone: 1000, grain: 1000, flour: 0, bread: 0, cattle: 0, meat: 0, hops: 0, water: 0, beer: 0, rawhide: 0, leather: 0, honey: 0, wax: 0, fish: 0, clay: 1000, pottery: 0, bricks: 0, wool: 0, fabric: 0, clothes: 0, herbs: 0, candles: 0,
             charcoal: 0, ironOre: 0, ironIngots: 0, tools: 0
         },
         unlockedFeatures: ['wood', 'stone', 'clay', 'grain', 'settlersCabinBuilding'],
@@ -36,6 +36,7 @@ function getDefaultGameState() {
             wood: 0, stone: 0, grain: 0, miller: 0, rancher: 0, butcher: 0, tanner: 0, hopFarmer: 0, water: 0, baker: 0, brewer: 0, beekeeper: 0, candlemaker: 0, builder: 0, foreman: 0, foremanAssistant: 0, masterBuilder: 0, clerk: 0, innkeeper: 0, tavernMaid: 0, priest: 0, fisherman: 0, clayMiner: 0, potter: 0, brickmaker: 0, shepherd: 0, weaver: 0, tailor: 0, herbalist: 0, healer: 0,
             charcoalBurner: 0, ironMiner: 0, smelter: 0, blacksmith: 0
         },
+        productionStatus: {},
         suppliedFoods: { grain: true, bread: false, meat: false, beer: false, honey: false, fish: false, },
         foodConsumptionPerSecond: { grain: 0, bread: 0, meat: 0, beer: 0, honey: 0, fish: 0, },
         currentProductionBonus: 1.0, villageTier: C.TIERS.SETTLEMENT, nextSettlerEvent: 10, nextSettlerTime: 10,
@@ -198,7 +199,7 @@ function calculateBuildTime(key, getDetails = false) {
 
     const baseTime = Object.values(building.cost).reduce((a, b) => a + b, 0) / 5;
     const builderCount = gameState.assignedWorkers[C.WORKERS.BUILDER];
-    const playerBaseSpeed = 1;
+    const playerBaseSpeed = 2; // Zwiększona bazowa prędkość budowy
     const speedPerBuilder = 0.1;
     const builderPower = builderCount * speedPerBuilder;
     let totalSpeed = playerBaseSpeed + builderPower;
@@ -683,25 +684,37 @@ function processFoodConsumption(delta) {
 }
 
 function processProduction(delta) {
+    if (!gameState.productionStatus) gameState.productionStatus = {};
     const foodTypes = ['grain', 'flour', 'bread', 'water', 'fish', 'cattle', 'meat', 'hops', 'beer', 'honey'];
+    
     for (const workerType in gameState.assignedWorkers) {
         const workerCount = gameState.assignedWorkers[workerType];
-        if (workerCount <= 0 || !workerData[workerType]) continue;
+        if (workerCount <= 0 || !workerData[workerType]) {
+            gameState.productionStatus[workerType] = { canProduce: true, missing: {} };
+            continue;
+        }
 
         const data = workerData[workerType];
-        
         let isAnyFoodProducer = data.produces ? Object.keys(data.produces).some(resource => foodTypes.includes(resource)) : false;
-        if (productionHalted && !isAnyFoodProducer) continue;
+        
+        if (productionHalted && !isAnyFoodProducer) {
+            gameState.productionStatus[workerType] = { canProduce: false, missing: { 'food': 0 } };
+            continue;
+        }
 
         let canProduce = true;
+        let missingResources = {};
         if (data.consumes) {
             for (const res in data.consumes) {
                 if (gameState.resources[res] < data.consumes[res] * workerCount * delta) {
                     canProduce = false;
-                    break;
+                    missingResources[res] = data.consumes[res] * workerCount * delta - gameState.resources[res];
                 }
             }
         }
+        
+        gameState.productionStatus[workerType] = { canProduce: canProduce, missing: missingResources };
+
         if (canProduce) {
             if (data.consumes) {
                 for (const res in data.consumes) gameState.resources[res] -= data.consumes[res] * workerCount * delta;

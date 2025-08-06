@@ -222,15 +222,43 @@ function createBuildingCards() {
                 card.id = `${key}-card`;
                 card.className = 'bg-gray-700 rounded-lg p-4 building-card hidden';
                 card.dataset.category = buildingData.category;
-                let supplySection = '';
-                if (key === C.BUILDINGS.INN) {
-                    const breadName = _t('resources.bread');
-                    const beerName = _t('resources.beer');
-                    const meatName = _t('resources.meat');
-                    supplySection = `<div id="inn-supply-section" class="mt-3 pt-3 border-t border-gray-600 hidden"><h4 class="text-md font-semibold mb-2">${_t('ui.supply')}</h4><div class="space-y-2"><button id="supply-bread-btn" onclick="toggleSupply('bread')" class="supply-btn w-full flex items-center justify-center p-2 rounded-md bg-gray-600 hover:bg-gray-500 transition disabled:opacity-50 disabled:cursor-not-allowed" disabled><img src="${resourceIcons.bread}" class="w-6 h-6 mr-2" alt="${breadName}"><span>${_t('ui.supply')} ${breadName}</span></button><button id="supply-beer-btn" onclick="toggleSupply('beer')" class="supply-btn w-full flex items-center justify-center p-2 rounded-md bg-gray-600 hover:bg-gray-500 transition disabled:opacity-50 disabled:cursor-not-allowed" disabled><img src="${resourceIcons.beer}" class="w-6 h-6 mr-2" alt="${beerName}"><span>${_t('ui.supply')} ${beerName}</span></button><button id="supply-meat-btn" onclick="toggleSupply('meat')" class="supply-btn w-full flex items-center justify-center p-2 rounded-md bg-gray-600 hover:bg-gray-500 transition disabled:opacity-50 disabled:cursor-not-allowed" disabled><img src="${resourceIcons.meat}" class="w-6 h-6 mr-2" alt="${meatName}"><span>${_t('ui.supply')} ${meatName}</span></button></div></div>`;
-                }
                 const demolishIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>`;
-                card.innerHTML = `<div class="building-card-content"><h3 id="${key}-name" class="text-xl font-bold"></h3><p id="${key}-desc" class="text-sm text-gray-300 mt-2"></p><div class="my-2 text-sm"><p><strong>${_t('ui.cost')}</strong> <span id="${key}-cost" class="font-semibold"></span></p></div><div id="${key}-upgrade-section" class="hidden"><hr class="border-gray-600 my-2"><p id="${key}-upgrade-info" class="text-xs text-blue-300"></p></div><div id="${key}-req" class="my-2 text-xs text-yellow-400"></div><div class="my-3 text-xs text-gray-400" id="${key}-time-info"></div>${supplySection}</div><div class="mt-auto pt-2"><p id="${key}-status" class="text-sm font-semibold mb-2"></p><div class="w-full bg-gray-600 rounded-full h-4 mb-2"><div id="${key}-progress-bar" class="bg-green-500 h-4 rounded-full" style="width: 0%"></div></div><div class="flex gap-2"><button id="build-${key}-button" class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2"></button><button id="demolish-${key}-button" onclick="demolishBuilding('${key}')" class="hidden w-1/3 demolish-btn text-white font-bold p-2 rounded-lg flex items-center justify-center" title="${_t('ui.demolish')}">${demolishIcon}</button></div></div>`;
+                card.innerHTML = `
+                    <div class="building-card-content">
+                        <h3 id="${key}-name" class="text-xl font-bold"></h3>
+                        <p id="${key}-desc" class="text-sm text-gray-300 mt-2 mb-3"></p>
+                        
+                        <div id="${key}-upgrade-section" class="hidden bg-gray-800 p-3 rounded-lg mb-3">
+                            <p class="text-xs text-blue-300 uppercase font-semibold mb-1">${_t('ui.upgradeTo')}:</p>
+                            <h4 id="${key}-upgrade-name" class="text-lg font-bold"></h4>
+                            <p id="${key}-upgrade-desc" class="text-xs text-gray-400 mt-1"></p>
+                        </div>
+
+                        <div class="my-2 text-sm">
+                            <p><strong>${_t('ui.cost')}</strong> <span id="${key}-cost" class="font-semibold"></span></p>
+                        </div>
+                        <div id="${key}-req" class="my-2 text-xs text-yellow-400"></div>
+                        <div class="my-3 text-xs text-gray-400" id="${key}-time-info"></div>
+
+                        <div id="inn-supply-section" class="mt-3 pt-3 border-t border-gray-600 hidden">
+                            <h4 class="text-md font-semibold mb-2">${_t('ui.supply')}</h4>
+                            <div class="space-y-2">
+                                <button id="supply-bread-btn" onclick="toggleSupply('bread')" class="supply-btn w-full flex items-center justify-center p-2 rounded-md bg-gray-600 hover:bg-gray-500 transition disabled:opacity-50 disabled:cursor-not-allowed" disabled><img src="${resourceIcons.bread}" class="w-6 h-6 mr-2"><span></span></button>
+                                <button id="supply-beer-btn" onclick="toggleSupply('beer')" class="supply-btn w-full flex items-center justify-center p-2 rounded-md bg-gray-600 hover:bg-gray-500 transition disabled:opacity-50 disabled:cursor-not-allowed" disabled><img src="${resourceIcons.beer}" class="w-6 h-6 mr-2"><span></span></button>
+                                <button id="supply-meat-btn" onclick="toggleSupply('meat')" class="supply-btn w-full flex items-center justify-center p-2 rounded-md bg-gray-600 hover:bg-gray-500 transition disabled:opacity-50 disabled:cursor-not-allowed" disabled><img src="${resourceIcons.meat}" class="w-6 h-6 mr-2"><span></span></button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-auto pt-2">
+                        <p id="${key}-status" class="text-sm font-semibold mb-2"></p>
+                        <div class="w-full bg-gray-600 rounded-full h-4 mb-2">
+                            <div id="${key}-progress-bar" class="bg-green-500 h-4 rounded-full" style="width: 0%"></div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button id="build-${key}-button" class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2"></button>
+                            <button id="demolish-${key}-button" onclick="demolishBuilding('${key}')" class="hidden w-1/3 demolish-btn text-white font-bold p-2 rounded-lg flex items-center justify-center" title="${_t('ui.demolish')}">${demolishIcon}</button>
+                        </div>
+                    </div>`;
                 grid.appendChild(card);
                 const timeInfoEl = card.querySelector(`#${key}-time-info`);
                 timeInfoEl.addEventListener('mouseover', (e) => {
@@ -239,7 +267,17 @@ function createBuildingCards() {
                 });
                 timeInfoEl.addEventListener('mouseout', hideTooltip);
                 timeInfoEl.addEventListener('mousemove', (e) => { dom.tooltip.style.left = `${e.pageX + 15}px`; dom.tooltip.style.top = `${e.pageY + 15}px`; });
-                buildingUIs[key] = { card: card, name: card.querySelector(`#${key}-name`), desc: card.querySelector(`#${key}-desc`), upgradeSection: card.querySelector(`#${key}-upgrade-section`), upgradeInfo: card.querySelector(`#${key}-upgrade-info`), req: card.querySelector(`#${key}-req`), status: card.querySelector(`#${key}-status`), progressBar: card.querySelector(`#${key}-progress-bar`), button: card.querySelector(`#build-${key}-button`), demolishButton: card.querySelector(`#demolish-${key}-button`), cost: card.querySelector(`#${key}-cost`), timeInfo: timeInfoEl, supplySection: card.querySelector(`#inn-supply-section`), };
+                buildingUIs[key] = { 
+                    card: card, name: card.querySelector(`#${key}-name`), desc: card.querySelector(`#${key}-desc`), 
+                    upgradeSection: card.querySelector(`#${key}-upgrade-section`), 
+                    upgradeName: card.querySelector(`#${key}-upgrade-name`), 
+                    upgradeDesc: card.querySelector(`#${key}-upgrade-desc`), 
+                    req: card.querySelector(`#${key}-req`), status: card.querySelector(`#${key}-status`), 
+                    progressBar: card.querySelector(`#${key}-progress-bar`), button: card.querySelector(`#build-${key}-button`), 
+                    demolishButton: card.querySelector(`#demolish-${key}-button`), cost: card.querySelector(`#${key}-cost`), 
+                    timeInfo: timeInfoEl, 
+                    supplySection: card.querySelector(`#inn-supply-section`),
+                };
             });
             dom.buildingsView.appendChild(grid);
         }
@@ -394,14 +432,27 @@ function updateWorkerPanel() {
             ui.count.textContent = gameState.assignedWorkers[workerType];
             ui.slots.textContent = gameState.workerSlots[workerType];
             ui.card.classList.toggle('hidden', gameState.workerSlots[workerType] === 0);
+            
             const data = workerData[workerType];
+            const status = gameState.productionStatus[workerType];
             let detailsText = '';
-            if(data.descriptionKey) detailsText = _t(data.descriptionKey);
-            else {
-                if (data.produces) detailsText += `${_t('ui.produces')}: ${Object.entries(data.produces).map(([res, amount]) => `+${amount} ${_t('resources.'+res)}/s`).join(', ')}`;
-                if (data.consumes) detailsText += `${detailsText ? '. ' : ''}${_t('ui.consumes')}: ${Object.entries(data.consumes).map(([res, amount]) => `${amount} ${_t('resources.'+res)}/s`).join(', ')}`;
+
+            if (data.descriptionKey) {
+                detailsText = _t(data.descriptionKey);
+            } else {
+                if (data.produces) {
+                    detailsText += `${_t('ui.produces')}: ${Object.entries(data.produces).map(([res, amount]) => `+${amount.toFixed(1)} ${_t('resources.'+res)}/s`).join(', ')}`;
+                }
+                if (data.consumes) {
+                    detailsText += `${detailsText ? '. ' : ''}${_t('ui.consumes')}: `;
+                    detailsText += Object.entries(data.consumes).map(([res, amount]) => {
+                        const isMissing = status && status.missing && res in status.missing;
+                        const colorClass = isMissing ? 'text-red-400' : '';
+                        return `<span class="${colorClass}">${amount.toFixed(1)} ${_t('resources.'+res)}/s</span>`;
+                    }).join(', ');
+                }
             }
-            ui.details.textContent = detailsText;
+            ui.details.innerHTML = detailsText;
         }
     }
 }
@@ -422,14 +473,16 @@ function updateBuildingCards() {
             }
         }
         
-        let isBuilt = gameState.buildings[currentStageKey].isBuilt;
-        let upgradeTargetKey = findUpgradeTarget(currentStageKey);
+        const isBuilt = gameState.buildings[currentStageKey].isBuilt;
+        const upgradeTargetKey = findUpgradeTarget(currentStageKey);
         const stageBuilding = gameState.buildings[currentStageKey];
+
+        ui.upgradeSection.classList.add('hidden');
 
         if (stageBuilding.betaStop && isBuilt) {
             ui.name.innerHTML = _t(stageBuilding.nameKey);
             ui.desc.textContent = _t(stageBuilding.descriptionKey);
-            ui.cost.classList.add('hidden');
+            ui.cost.parentElement.classList.add('hidden');
             ui.timeInfo.classList.add('hidden');
             ui.button.innerHTML = _t('ui.notAvailableInBeta');
             ui.button.disabled = true;
@@ -438,20 +491,24 @@ function updateBuildingCards() {
             ui.progressBar.style.width = '100%';
             continue;
         }
+        ui.cost.parentElement.classList.remove('hidden');
 
         const currentStageBuilding = gameState.buildings[currentStageKey];
         const queueCount = gameState.buildingQueue.filter(b => b.key === key).length;
+        
         ui.name.innerHTML = `${_t(currentStageBuilding.nameKey)} <span class="text-base text-gray-400">${currentStageBuilding.repeatable ? `(${currentStageBuilding.count}${queueCount > 0 ? ` +${queueCount}` : ''})` : ''}</span>`;
         ui.desc.textContent = _t(currentStageBuilding.descriptionKey);
 
-        let isUpgrade = !!upgradeTargetKey && isBuilt;
-        let targetKey = isUpgrade ? upgradeTargetKey : currentStageKey;
-        let targetBuilding = gameState.buildings[targetKey];
+        const isUpgrade = !!upgradeTargetKey && isBuilt;
+        const targetKey = isUpgrade ? upgradeTargetKey : currentStageKey;
+        const targetBuilding = gameState.buildings[targetKey];
         
         ui.timeInfo.dataset.buildKey = targetKey;
-        ui.upgradeSection.classList.toggle('hidden', !(isUpgrade && targetBuilding.upgradesFrom && gameState.buildings[targetBuilding.upgradesFrom].upgradeInfo));
-        if (!ui.upgradeSection.classList.contains('hidden')) {
-            ui.upgradeInfo.textContent = _t(gameState.buildings[targetBuilding.upgradesFrom].upgradeInfo);
+        
+        if (isUpgrade) {
+            ui.upgradeSection.classList.remove('hidden');
+            ui.upgradeName.textContent = _t(targetBuilding.nameKey);
+            ui.upgradeDesc.textContent = _t(targetBuilding.descriptionKey);
         }
 
         const { currentTime: buildTime } = calculateBuildTime(targetKey);
@@ -470,9 +527,12 @@ function updateBuildingCards() {
 
         const hammerIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 12l-8.373 8.373a1 1 0 1 1-1.414-1.414L12.586 11.586l-1.99-1.99a3 3 0 1 1 4.24-4.24l1.99 1.99 1.414-1.414a1 1 0 1 1 1.414 1.414L15 12z"></path></svg>`;
         const isInQueue = gameState.buildingQueue.some(b => b.key === targetKey || b.key === key);
-        if (isUpgrade && isInQueue) ui.button.innerHTML = `<span>${_t('ui.upgrading')}...</span>`;
-        else if (isUpgrade) ui.button.innerHTML = `${hammerIcon} <span>${_t('ui.upgradeTo')} ${_t(targetBuilding.nameKey)}</span>`;
-        else ui.button.innerHTML = `${hammerIcon} <span>${_t('ui.build')}</span>`;
+        
+        if (isUpgrade) {
+             ui.button.innerHTML = isInQueue ? `<span>${_t('ui.upgrading')}...</span>` : `${hammerIcon} <span>${_t('ui.upgrade')}</span>`;
+        } else {
+             ui.button.innerHTML = `${hammerIcon} <span>${_t('ui.build')}</span>`;
+        }
         ui.button.onclick = () => startBuilding(targetKey);
 
         ui.demolishButton.classList.toggle('hidden', !currentStageBuilding.repeatable || currentStageBuilding.count === 0);
@@ -509,19 +569,23 @@ function updateBuildingCards() {
             const isInnActive = isBuildingTierMet(C.BUILDINGS.INN);
             ui.supplySection.classList.toggle('hidden', !isInnActive);
             if (isInnActive) {
-                const breadBtn = ui.supplySection.querySelector('#supply-bread-btn');
-                const beerBtn = ui.supplySection.querySelector('#supply-beer-btn');
-                const meatBtn = ui.supplySection.querySelector('#supply-meat-btn');
-                breadBtn.disabled = !gameState.unlockedFeatures.includes('bread');
-                beerBtn.disabled = !gameState.unlockedFeatures.includes('beer');
-                meatBtn.disabled = !gameState.unlockedFeatures.includes('meat');
-                breadBtn.classList.toggle('active', gameState.innSupplies.bread);
-                beerBtn.classList.toggle('active', gameState.innSupplies.beer);
-                meatBtn.classList.toggle('active', gameState.innSupplies.meat);
+                const breadBtn = ui.supplySection.querySelector('#supply-bread-btn span');
+                const beerBtn = ui.supplySection.querySelector('#supply-beer-btn span');
+                const meatBtn = ui.supplySection.querySelector('#supply-meat-btn span');
+                breadBtn.parentElement.disabled = !gameState.unlockedFeatures.includes('bread');
+                beerBtn.parentElement.disabled = !gameState.unlockedFeatures.includes('beer');
+                meatBtn.parentElement.disabled = !gameState.unlockedFeatures.includes('meat');
+                breadBtn.textContent = `${_t('ui.supply')} ${_t('resources.bread')}`;
+                beerBtn.textContent = `${_t('ui.supply')} ${_t('resources.beer')}`;
+                meatBtn.textContent = `${_t('ui.supply')} ${_t('resources.meat')}`;
+                breadBtn.parentElement.classList.toggle('active', gameState.innSupplies.bread);
+                beerBtn.parentElement.classList.toggle('active', gameState.innSupplies.beer);
+                meatBtn.parentElement.classList.toggle('active', gameState.innSupplies.meat);
             }
         }
     }
 }
+
 
 function updateInfoPanel() {
     const buildingCount = getTotalBuildingCount();
@@ -773,7 +837,7 @@ function showBuildTimeTooltip(key, event) {
     if (!building) return;
 
     const { baseTime, currentTime, details } = calculateBuildTime(key, true);
-    const playerBaseSpeed = 1;
+    const playerBaseSpeed = 2;
 
     let html = `<strong class="text-lg text-blue-300">${_t('ui.constructionTime')}</strong>`;
     html += `<div class="mt-2"><span>${_t('ui.baseTime')}:</span> <span class="font-semibold">${baseTime.toFixed(1)}s</span></div>`;
