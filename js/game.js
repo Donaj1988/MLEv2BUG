@@ -5,7 +5,6 @@
 // ===================================================================================
 
 let gameState = {};
-const SAVE_KEY = 'economicGameSave_v79_t2_t3_impl';
 
 function getDefaultGameState() {
     const tierKeys = Object.keys(tierConfig);
@@ -170,14 +169,14 @@ function recalculateAllStats() {
     }
 
     if (gameState.assignedWorkers.foreman > 0) {
-        gameState.workerLimit += 30;
+        gameState.workerLimit += BALANCE.bonuses.foremanWorkerLimit;
     }
     let assistantBonus = 0;
     const assistantCount = gameState.assignedWorkers.foremanAssistant;
     if (assistantCount > 0) {
-        if (isBuildingTierMet('workersGuildhall')) assistantBonus = assistantCount * 65;
-        else if (isBuildingTierMet('workersBarracks')) assistantBonus = assistantCount * 20;
-        else if (isBuildingTierMet(C.BUILDINGS.WORKERS_QUARTERS)) assistantBonus = assistantCount * 22;
+        if (isBuildingTierMet('workersGuildhall')) assistantBonus = assistantCount * BALANCE.bonuses.assistantMultiplier.workersGuildhall;
+        else if (isBuildingTierMet('workersBarracks')) assistantBonus = assistantCount * BALANCE.bonuses.assistantMultiplier.workersBarracks;
+        else if (isBuildingTierMet(C.BUILDINGS.WORKERS_QUARTERS)) assistantBonus = assistantCount * BALANCE.bonuses.assistantMultiplier.workersQuarters;
     }
     gameState.workerLimit += assistantBonus;
 
@@ -236,19 +235,19 @@ function calculateNextSettlerTime() {
     
     let innBonus = 0;
     if (isBuildingTierMet(C.BUILDINGS.INN) && gameState.assignedWorkers[C.WORKERS.INNKEEPER] > 0) {
-        innBonus = gameState.buildings[C.BUILDINGS.INN].effect.settlerTimeBonus;
+        innBonus = BALANCE.buildingEffects.inn.settlerTimeBonus;
         if (isBuildingTierMet(C.BUILDINGS.TAVERN) && gameState.assignedWorkers[C.WORKERS.TAVERN_MAID] > 0) {
-            innBonus += gameState.buildings[C.BUILDINGS.TAVERN].effect.settlerTimeBonus;
+            innBonus += BALANCE.buildingEffects.tavern.settlerTimeBonus;
         }
     }
     totalBonus += innBonus;
 
     if (isBuildingTierMet(C.BUILDINGS.CHURCH) && gameState.assignedWorkers[C.WORKERS.PRIEST] > 0) {
-        totalBonus += gameState.buildings[C.BUILDINGS.CHURCH].effect.settlerTimeBonus;
+        totalBonus += BALANCE.buildingEffects.church.settlerTimeBonus;
     }
 
     if (isBuildingTierMet(C.BUILDINGS.HEALERS_HUT) && gameState.assignedWorkers[C.WORKERS.HEALER] > 0) {
-        totalBonus += gameState.buildings[C.BUILDINGS.HEALERS_HUT].effect.settlerTimeBonus;
+        totalBonus += BALANCE.buildingEffects.healersHut.settlerTimeBonus;
     }
 
     if (isBuildingTierMet(C.BUILDINGS.INN)) {
@@ -502,11 +501,6 @@ function processOfflineProgress(totalSeconds) {
     updateDisplay();
 }
 
-// ===================================================================================
-//
-//  SECTION 3: SAVE/LOAD
-//
-// ===================================================================================
 let isSimulatingOffline = false;
 
 function saveGame() {
@@ -623,18 +617,9 @@ function resetGame() {
     );
 }
 
-// ===================================================================================
-//
-//  SECTION 4: MAIN LOOP & UPDATES
-//
-// ===================================================================================
-
 let lastTick = Date.now();
 let productionHalted = false;
 let hiddenTimestamp = null;
-
-
-// --- Helper functions for updateGameState ---
 
 function processFoodConsumption(delta) {
     const workingWorkers = Object.values(gameState.assignedWorkers).reduce((a, b) => a + b, 0);
@@ -817,10 +802,6 @@ function processTierUp() {
     }
 }
 
-/**
- * REFACTORED: The main game loop is now a clean dispatcher.
- * It calls helper functions, making the logic flow clear and easy to manage.
- */
 function updateGameState(delta) {
     processFoodConsumption(delta);
     processProduction(delta);
